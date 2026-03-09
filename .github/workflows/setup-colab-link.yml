@@ -1,0 +1,36 @@
+name: Setup Colab Link
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup student repo
+        run: |
+          # Skip if this is the base template repo
+          [[ "${{ github.repository }}" == *"sample-project-template" ]] && exit 0
+
+          # Skip if placeholder is already gone from both files — nothing to do
+          grep -q 'REPO_PLACEHOLDER' README.md Homework.ipynb || exit 0
+
+          REPO="${{ github.repository }}"
+          sed -i "s|REPO_PLACEHOLDER|${REPO}|g" README.md Homework.ipynb
+
+          # Remove the VS Code badge GitHub Classroom inserts
+          sed -i '/classroom\.github\.com\/assets\/open-in-vscode/d' README.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md Homework.ipynb
+          git rm .github/workflows/setup-colab-link.yml
+          git commit -m "chore: set Colab link for this classroom"
+          git push
